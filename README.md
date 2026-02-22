@@ -9,7 +9,7 @@ Le backend est `API-first` .
 
 ## Architecture
 
-
+```
 gestion_scolaire/
 |- backend/
 |  |- manage.py
@@ -34,6 +34,8 @@ gestion_scolaire/
 |  `- src/
 |- requirements.txt
 `- .gitignore
+
+```
 ```
 
 ## Prerequis
