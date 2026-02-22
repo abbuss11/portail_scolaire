@@ -1,0 +1,211 @@
+ARCHITECTURE DE LA BASE DE DONNEES
+Projet: Gestion Scolaire
+Moteur: SQLite
+Fichier principal: backend/db.sqlite3
+
+========================================================================
+1) VUE D'ENSEMBLE
+========================================================================
+
+La base est relationnelle et composee de:
+
+- tables metier (app "web")
+- tables systeme Django (auth/session/admin/migrations)
+
+Tables metier:
+
+1. web_profile
+2. web_student
+3. web_subject
+4. web_grade
+5. web_attendance
+
+Tables systeme Django les plus importantes:
+
+1. auth_user
+2. auth_group
+3. auth_permission
+4. django_admin_log
+5. django_content_type
+6. django_migrations
+7. django_session
+
+========================================================================
+2) MODELE RELATIONNEL (METIER)
+========================================================================
+
+DIAGRAMME ASCII (cardinalites):
+
+auth_user 1 --- 1 web_profile 1 --- 1 web_student
+web_student 1 --- N web_grade N --- 1 web_subject
+web_student 1 --- N web_attendance
+
+Regles de suppression:
+
+- toutes les FK metier sont en ON DELETE CASCADE
+
+========================================================================
+3) DETAIL DES TABLES METIER
+========================================================================
+
+-----------------------------------------------------------------------
+3.1 Table: web_profile
+-----------------------------------------------------------------------
+Role: extension du compte utilisateur Django.
+
+Colonnes principales:
+
+- id (PK, bigint)
+- user_id (FK unique -> auth_user.id)
+- role (varchar(10), valeurs: ADMIN, PROF, STUDENT)
+- telephone (varchar(20), nullable/blank)
+- adresse (text, nullable/blank)
+- date_naissance (date, nullable)
+
+Contraintes:
+
+- user_id UNIQUE (OneToOne avec auth_user)
+
+-----------------------------------------------------------------------
+3.2 Table: web_student
+-----------------------------------------------------------------------
+Role: entite etudiant liee a un profil de role STUDENT.
+
+Colonnes principales:
+
+- id (PK, bigint)
+- profile_id (FK unique -> web_profile.id)
+- matricule (varchar(20), UNIQUE)
+- nom (varchar(150))
+- prenom (varchar(150))
+- classe (varchar(2), valeurs: L1, L2, L3, M1, M2)
+- date_inscription (date, auto_now_add)
+- date_naissance (date, nullable)
+- telephone (varchar(20), nullable/blank)
+
+Contraintes:
+
+- profile_id UNIQUE (OneToOne avec web_profile)
+- matricule UNIQUE
+
+-----------------------------------------------------------------------
+3.3 Table: web_subject
+-----------------------------------------------------------------------
+Role: referentiel des matieres.
+
+Colonnes principales:
+
+- id (PK, bigint)
+- name (varchar(100))
+- coefficient (integer, defaut 1)
+
+Contraintes:
+
+- aucune contrainte d'unicite explicite sur name (amelioration possible)
+
+-----------------------------------------------------------------------
+3.4 Table: web_grade
+-----------------------------------------------------------------------
+Role: notes des etudiants par matiere.
+
+Colonnes principales:
+
+- id (PK, bigint)
+- student_id (FK -> web_student.id)
+- subject_id (FK -> web_subject.id)
+- value (float)
+- date (date, auto_now_add)
+
+Contraintes metier (au niveau API):
+
+- value doit etre comprise entre 0 et 20
+
+-----------------------------------------------------------------------
+3.5 Table: web_attendance
+-----------------------------------------------------------------------
+Role: suivi de presence/absence.
+
+Colonnes principales:
+
+- id (PK, bigint)
+- student_id (FK -> web_student.id)
+- date (date)
+- present (boolean, defaut True)
+- justified (boolean, defaut False)
+
+Convention metier:
+
+- une absence est enregistree avec present=False
+
+========================================================================
+4) TABLES SYSTEME DJANGO (RESUME)
+========================================================================
+
+auth_user:
+- comptes applicatifs
+- utilise pour login/logout/session
+
+auth_group, auth_permission:
+- gestion des permissions Django (admin)
+
+django_session:
+- sessions utilisateurs (auth par cookie)
+
+django_admin_log:
+- traces des actions admin
+
+django_migrations:
+- historique applique des migrations
+
+========================================================================
+5) REGLES METIER IMPACTANT LE SCHEMA
+========================================================================
+
+1) Creation automatique de Profile:
+- un signal cree web_profile lors de la creation d'un auth_user
+
+2) Separation des roles:
+- role derive de web_profile.role
+- superuser/staff interpretes comme role "admin" au niveau API
+
+3) Droit d'acces:
+- admin et teacher: CRUD complet sur etudiants/notes/absences
+- student: acces restreint a ses propres donnees
+
+========================================================================
+6) INDEX ET PERFORMANCE
+========================================================================
+
+Indexes implicites existants:
+
+- PK sur chaque table
+- UNIQUE sur web_profile.user_id
+- UNIQUE sur web_student.profile_id
+- UNIQUE sur web_student.matricule
+- indexes FK implicites Django sur student_id/subject_id
+
+Recommandations (si volumetrie en hausse):
+
+1. Ajouter un index compose sur web_grade(student_id, date)
+2. Ajouter un index compose sur web_attendance(student_id, date)
+3. Ajouter une contrainte unique metier potentielle:
+   - web_attendance(student_id, date) pour eviter les doublons journaliers
+4. En production, envisager PostgreSQL pour meilleure concurrence/locking
+
+========================================================================
+7) COHERENCE ET EVOLUTIVITE
+========================================================================
+
+Points forts:
+
+- schema simple et lisible
+- relations explicites et normalisees
+- bonne base pour dashboard et reporting
+
+Axes d'evolution:
+
+- historiser les changements de classe/niveau
+- ajouter table d'annee academique et periode
+- ajouter table d'evaluations (type, ponderation, semestre)
+
+Fin du document
