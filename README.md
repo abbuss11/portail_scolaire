@@ -9,7 +9,6 @@ Le backend est `API-first` .
 
 ## Architecture
 
-
 gestion_scolaire/
 |- backend/
 |  |- manage.py
@@ -49,11 +48,11 @@ gestion_scolaire/
 Depuis la racine du projet:
 
 ```powershell
-python -m venv .venv
+py -3.14 -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements.txt
-python backend\manage.py migrate
-python backend\manage.py runserver
+python manage.py migrate
+python manage.py runserver
 ```
 
 Backend disponible sur `http://127.0.0.1:8000`.
@@ -98,8 +97,8 @@ Le proxy Vite redirige automatiquement `/api` vers `http://127.0.0.1:8000`.
 
 ```powershell
 # Backend
-python backend\manage.py check
-python backend\manage.py makemigrations --check --dry-run
+python manage.py check
+python manage.py makemigrations --check --dry-run
 
 # Frontend
 cd frontend
